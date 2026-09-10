@@ -100,8 +100,17 @@ NLA reconstructor that lands at FVE 0.45.
 - [Refusal in Language Models Is Mediated by a Single Direction](https://proceedings.neurips.cc/paper_files/paper/2024/file/f545448535dfde4f9786555403ab7c49-Paper-Conference.pdf) — Arditi et al., NeurIPS 2024
 - [Activation Addition](https://arxiv.org/abs/2308.10248) — Turner et al.
 
-> **Note on the refusal demo** (Part 4 short / Part 5 long). It measures the *mechanism* — the model's
-> probability of beginning a refusal, before and after ablation — and reports aggregate
-> rates. It does not print ablated completions to harmful prompts. The point is how
-> shallow the safety property is, and a collapsing bar chart makes that better than a wall
-> of text would.
+> **Note on the refusal demo** (Part 4 short / Part 5 long). It shows a bar chart of
+> refusal rates before and after ablation, then the actual before/after completions on the
+> prompts the intact model refused.
+>
+> It is kept safe by the prompt set rather than by withholding output. Every
+> harmful-shaped prompt is deliberately low-severity — shoplifting, exam cheating, resume
+> padding — picked to trip a small model's refusal without the answer being worth
+> anything, and completions are cut at ~28 tokens so you see the model *begin* to comply
+> rather than produce a finished document. The finding on display is that the mechanism
+> is one direction wide, not that the model is dangerous.
+>
+> Worth knowing before you present it: the output is a live generation from an ablated
+> model, so run the notebook first and read what it actually says. Greedy decoding makes
+> it reproducible, so what you see in rehearsal is what appears on stage.

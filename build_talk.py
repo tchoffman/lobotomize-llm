@@ -880,10 +880,15 @@ Verified across 13 open chat models up to 72B, and it can be baked in as a perma
 weight edit with **no retraining**. This is why "abliterated" models are all over the
 model hubs.
 
-> **How this notebook demos it:** we measure the *mechanism*, not the output. We count how
-> often the model **begins a refusal**, before and after ablation. We never print an
-> ablated completion to a harmful prompt. The point is how shallow the safety property is
-> — and a collapsing bar chart makes that point better than a wall of text does.
+> **How this notebook demos it.** Two things, in order: a bar chart of how often the model
+> **begins a refusal** before and after ablation, then the actual before/after text on the
+> prompts it used to refuse.
+>
+> The demo is kept safe by the *prompt set*, not by hiding the output. Every harmful-shaped
+> prompt here is deliberately low-severity — shoplifting, exam cheating, resume padding —
+> chosen to trip a small model's refusal without the answer being worth anything. And
+> completions are cut at ~28 tokens, so you see the model **start to comply** rather than
+> produce a finished document. That is the mechanism change, which is the whole point.
 """)
 
 code("""
@@ -969,6 +974,20 @@ def ablate_hooks(direction):
         h = h - (h @ d).unsqueeze(-1) * d
         return (h,) + out[1:] if isinstance(out, tuple) else h
     return [blk.register_forward_hook(hook) for blk in cm.model.layers]
+
+@torch.no_grad()
+def complete(prompts, direction=None, max_new=28):
+    # the generations refuses() throws away - same code path, returns the text
+    handles = ablate_hooks(direction) if direction is not None else []
+    outs = []
+    for p in prompts:
+        ids = ctok(as_chat(p), return_tensors="pt").to(DEV)
+        g = cm.generate(**ids, max_new_tokens=max_new, do_sample=False,
+                        pad_token_id=ctok.eos_token_id)
+        outs.append(ctok.decode(g[0][ids["input_ids"].shape[1]:],
+                                skip_special_tokens=True).strip().replace(chr(10), " "))
+    for h in handles: h.remove()
+    return outs
 
 @torch.no_grad()
 def refuses(prompts, direction=None, show=False):
@@ -1115,6 +1134,58 @@ And the scale caveat: Arditi et al. use hundreds of prompts, sweep positions as 
 layers, and verify on models up to 72B. We used 8 pairs on a 0.5B model, with a held-out
 set small enough that one prompt moves the bar 11%. **That the cheap version works at all
 is the point.**
+""")
+
+md("""
+### Step 4 — and now the demo
+
+The bar chart says the refusal rate went to zero. Here is what that looks like as text:
+**the same held-out prompts, the intact model on one line, the ablated model on the next.**
+
+Same weights. Same prompts. Same greedy decoding. One vector subtracted.
+""")
+
+code("""
+d_best  = refusal_direction(best)
+intact  = complete(held_h)
+ablated = complete(held_h, d_best)
+
+for i, (p, b, a) in enumerate(zip(held_h, intact, ablated), 1):
+    print(f"{i}. {p}")
+    print(f"     intact   {b[:88]!r}")
+    print(f"     ABLATED  {a[:88]!r}")
+    print()
+""")
+
+md("""
+### That is the lobotomy
+
+Read down the `intact` lines: *"I'm sorry, but I can't assist with that."* Read down the
+`ABLATED` lines: the model just answers.
+
+Nothing was retrained. No weights were fine-tuned. No prompt was jailbroken — the prompts
+are byte-for-byte identical, and decoding is greedy, so there is no lucky sampling here
+either. We averaged 8 pairs of sentences, subtracted, and projected the result out of the
+residual stream.
+
+**The refusal did not get overridden. It stopped existing.** The model is not reluctantly
+complying; it has no representation of "I should decline" left to act on.
+
+And note what *did* survive: it still writes fluent English, still follows the instruction,
+still knows what the words mean. We removed one specific thing and left the rest of the
+model intact. That is what makes it a scalpel rather than a sledgehammer — and it is why
+this is a safety result and not a party trick.
+
+**One honest reading, before someone in the audience beats me to it.** Look at 3, 6 and 7.
+The model stopped declining — but what it actually wrote was a perfectly pleasant letter.
+It complied with the *form* of the request and missed the malice completely. What we
+deleted was the refusal, not the model's competence at causing harm, and a 0.5B model has
+very little of the latter to delete.
+
+That distinction matters for how you read the whole result. The finding is not "we made a
+dangerous model." The finding is **"the thing standing between a request and an answer was
+one direction, and it is gone."** On a 0.5B model that is a curiosity. The paper verified
+it up to 72B, where it is not.
 """)
 
 # ───────────────────────────── PART 5 — CLOSE ─────────────────────────────
