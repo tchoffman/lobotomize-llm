@@ -417,35 +417,14 @@ plt.suptitle("Generated from random latent vectors — none of these digits exis
 """)
 
 md("""
-### The latent walk
+### First: what did it even generate?
 
-Pick two latent vectors, interpolate between them, decode every step. If the space were
-just a lookup table we would see one digit abruptly cut to another. Instead we get a
-*continuous morph* — the space in between is meaningful too.
-""")
+We are about to navigate this space, and to do that we need to know what lives where. The
+generator does not come with labels — it takes 32 numbers and returns an image, and
+nothing tells us which digit came out.
 
-code("""
-torch.manual_seed(7)
-z0, z1 = torch.randn(1, Z_DIM, device=DEV), torch.randn(1, Z_DIM, device=DEV)
-steps = torch.linspace(0, 1, 10, device=DEV).view(-1, 1)
-with torch.no_grad():
-    walk = G((1 - steps) * z0 + steps * z1)
-
-fig, axes = plt.subplots(1, 10, figsize=(13, 1.8))
-for ax, im in zip(axes, walk):
-    ax.imshow(im[0].cpu(), cmap="gray"); ax.axis("off")
-plt.suptitle("Interpolating in latent space: z0  →  z1"); plt.show()
-""")
-
-md("""
-### Arithmetic on latent vectors
-
-Same move as `king − man + woman`, and we find the direction the same way: **average the
-latents that produce one thing, average the latents that produce another, subtract.**
-
-To sort generated digits into groups we need labels, so train a throwaway classifier on
-real MNIST (logistic regression on raw pixels, ~96%, instant), then use it to label 4000
-generated samples.
+So borrow a referee: train a throwaway classifier on **real** MNIST (logistic regression on
+raw pixels, ~96%, instant), and use it to label 4000 generated samples.
 """)
 
 code("""
@@ -460,7 +439,56 @@ with torch.no_grad():
     gen = G(pool)
 def to_flat(x): return x.squeeze(1).add(1).div(2).clamp(0, 1).reshape(len(x), -1).cpu().numpy()
 labels = probe_clf.predict(to_flat(gen))
+
 print("what the GAN generates:", {d: int((labels == d).sum()) for d in range(10)})
+
+def a_latent_that_makes(digit, k=3):
+    \"\"\"Pull one z out of the pool whose image the classifier calls `digit`.\"\"\"
+    return pool[int(np.where(labels == digit)[0][k])].unsqueeze(0)
+""")
+
+md("""
+### The latent walk
+
+Now we can pick endpoints on purpose. Take a `z` that makes a **0** and a `z` that makes a
+**1**, walk in a straight line between them, and decode every step.
+
+If this space were just a lookup table, we would see a 0 for five frames and then an abrupt
+cut to a 1.
+""")
+
+code("""
+z0, z1 = a_latent_that_makes(0), a_latent_that_makes(1)
+steps = torch.linspace(0, 1, 10, device=DEV).view(-1, 1)
+with torch.no_grad():
+    walk = G((1 - steps) * z0 + steps * z1)
+walk_labels = probe_clf.predict(to_flat(walk))
+
+fig, axes = plt.subplots(1, 10, figsize=(13, 2.1))
+for ax, im, lab in zip(axes, walk, walk_labels):
+    ax.imshow(im[0].cpu(), cmap="gray"); ax.axis("off")
+    ax.set_title(str(lab), fontsize=10, weight="bold")
+plt.suptitle("A straight line from a '0' to a '1'   (titles = what the classifier sees)", y=1.06)
+plt.tight_layout(); plt.show()
+""")
+
+md("""
+### Look at what's in the middle
+
+No abrupt cut — the loop of the 0 narrows, pinches, and straightens into the stroke of a 1.
+Every frame is a plausible handwritten *something*. The space between two points is not
+empty, and it is not noise.
+
+And notice what the classifier calls those middle frames: **2**. The territory between a 0
+and a 1 is full of 2s. That is what it means for a space to be *organised* — the in-between
+is somewhere, not nowhere.
+""")
+
+md("""
+### Arithmetic on latent vectors
+
+Same move as `king − man + woman`, and we find the direction the same way: **average the
+latents that produce one thing, average the latents that produce another, subtract.**
 """)
 
 code("""
@@ -483,8 +511,8 @@ for r in range(4):
     for c, im in enumerate(row):
         axes[r, c].imshow(im[0].cpu(), cmap="gray"); axes[r, c].axis("off")
         axes[r, c].set_title(f"{pl[c]}", fontsize=9)
-plt.suptitle("ONE direction  (mean z of '8'  −  mean z of '1')  added to four unrelated digits\\n"
-             "titles = what the classifier now thinks it is", y=1.02)
+plt.suptitle("ONE direction (mean z of '8' minus mean z of '1') added to four unrelated digits"
+             "   |   titles = what the classifier now thinks it is", y=1.0)
 plt.tight_layout(); plt.show()
 """)
 
@@ -504,6 +532,7 @@ always.
 Hold onto that sentence in bold. It comes back three more times — and the last time, the
 thing being changed is a safety mechanism.
 """)
+
 
 # ───────────────────────────── PART 3 — RUN IT BACKWARDS ─────────────────────────────
 md("""
@@ -1448,6 +1477,72 @@ nb = {"cells": C, "metadata": {"kernelspec": {"display_name": "Python (lobotomiz
       "language": "python", "name": "lobotomy"},
       "language_info": {"name": "python", "version": "3.11.14"}},
       "nbformat": 4, "nbformat_minor": 5}
+
+# ── Takeaway callouts ───────────────────────────────────────────────────────────
+# One TL;DR + ELI5 under each Part heading. Applied as a post-process so the
+# callouts survive any reordering of the cells above.
+TAKEAWAYS = {
+ 0: ("You cannot measure a mind by interviewing it. Asking changes the answer, and the "
+     "answer tracks the behaviour.",
+     "A student behaves differently when they think the teacher is watching. Now imagine "
+     "the only way to find out whether they think they're being watched is to ask them."),
+ 1: ("Force information through a narrow gap and it is obliged to become meaningful. "
+     "What survives the squeeze is what mattered.",
+     "Describe a photo to a friend using two numbers, and have them redraw it. You would "
+     "be forced to pick two numbers that actually count."),
+ 2: ("A trained network turns meaning into geometry. And once meaning is geometry, "
+     "editing is arithmetic.",
+     "If \"add loops\" is a direction you can walk in, you can walk *any* digit in that "
+     "direction. Find the direction, add it."),
+ 3: ("Models run in reverse, so their insides are addressable — but the answer only means "
+     "something if you constrain the search to things that could actually occur.",
+     "Ask the model to draw its idea of a 3. Let it draw anything and you get TV static it "
+     "is 100% sure about. Hand it a pen that can only draw digits, and you get a 3."),
+ 4: ("An LLM's working state is a vector, and vectors can be added to. Two forward passes "
+     "and a subtraction buy you a control knob.",
+     "The model mutters notes to itself as it reads. Slip an extra note into the pile and "
+     "it writes something different."),
+ 5: ("Refusal is mediated by roughly one direction in activation space, which means "
+     "alignment is far shallower than the effort that went into building it.",
+     "You would expect \"don't help with harmful things\" to be woven through the whole "
+     "model. It is closer to a single wire. Cut it and the model stops saying no."),
+ 6: ("Make the bottleneck English and the compressed state becomes readable by "
+     "construction — and then editable.",
+     "Instead of squeezing a thought down to 32 numbers, squeeze it into a sentence. Now "
+     "you can read it, change one word, and push it back in."),
+ 7: ("We can now read some of what a model is thinking without asking it. Badly, "
+     "expensively, and about half the time.",
+     "We got a window into the machine. It is small, smudged, and it sometimes makes "
+     "things up. It is still a window where there was not one."),
+}
+
+import re as _re
+for _c in C:
+    if _c["cell_type"] != "markdown":
+        continue
+    _m = _re.search(r"^## Part (\d):", "".join(_c["source"]), _re.M)
+    if not _m:
+        continue
+    _tldr, _eli5 = TAKEAWAYS[int(_m.group(1))]
+    _ls = "".join(_c["source"]).rstrip("\n").split("\n")
+    _at = next(i for i, l in enumerate(_ls) if l.startswith("## Part "))
+    _callout = ["", f"> **TL;DR** — {_tldr}", ">", f"> **ELI5** — {_eli5}", ""]
+    _c["source"] = _lines("\n".join(_ls[:_at + 1] + _callout + _ls[_at + 1:]))
+
+# Guard: a "\n" escape that loses a backslash passing through this file turns into a real
+# newline inside a string literal and silently breaks the cell. So compile everything first.
+_bad = 0
+for _i, _c in enumerate(C):
+    if _c["cell_type"] != "code":
+        continue
+    _src = "".join(_c["source"])
+    try:
+        compile(_src, f"cell{_i}", "exec")
+    except SyntaxError as _e:
+        _bad += 1
+        print(f"!! SYNTAX ERROR in cell {_i} line {_e.lineno}: {_e.msg}")
+if _bad:
+    raise SystemExit(f"refusing to write lobotomy.ipynb - {_bad} cell(s) do not compile")
 
 with open("lobotomy.ipynb", "w") as f:
     json.dump(nb, f, indent=1)

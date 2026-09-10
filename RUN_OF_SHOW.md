@@ -10,6 +10,25 @@ Total live compute across the whole talk: **133 s**. Only cell 62 (65 s) needs n
 
 ---
 
+## Takeaways at a glance
+
+One line per part. If the room remembers nothing else, these are the eight.
+
+| Part | | The takeaway |
+|---|---|---|
+| **0** | A story you have probably heard | You cannot measure a mind by interviewing it. Asking changes the answer, and the answer tracks the behaviour. |
+| **1** | Compression — the one architecture this talk needs | Force information through a narrow gap and it is obliged to become meaningful. What survives the squeeze is what mattered. |
+| **2** | Latent spaces have directions | A trained network turns meaning into geometry. And once meaning is geometry, editing is arithmetic. |
+| **3** | Run the model backwards | Models run in reverse, so their insides are addressable — but the answer only means something if you constrain the search to things that could actually occur. |
+| **4** | The same trick, on an LLM | An LLM's working state is a vector, and vectors can be added to. Two forward passes and a subtraction buy you a control knob. |
+| **5** | Lobotomy #2 — the scalpel | Refusal is mediated by roughly one direction in activation space, which means alignment is far shallower than the effort that went into building it. |
+| **6** | What if the bottleneck were English? | Make the bottleneck English and the compressed state becomes readable by construction — and then editable. |
+| **7** | Back to the cold open | We can now read some of what a model is thinking without asking it. Badly, expensively, and about half the time. |
+
+Each is also rendered as a **TL;DR / ELI5** callout directly under its heading in
+the notebook, so the audience sees it before the demos, not after.
+
+---
 ## Part 0 — Cold open · 6 min · clock 0:00 → 0:06
 
 | # | | Beat |
