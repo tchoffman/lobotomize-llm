@@ -489,6 +489,25 @@ md("""
 
 Same move as `king − man + woman`, and we find the direction the same way: **average the
 latents that produce one thing, average the latents that produce another, subtract.**
+
+```
+direction  =  mean z of everything the GAN drew as an 8
+            - mean z of everything the GAN drew as a 1
+```
+
+Then take four **unrelated** random latents and add that one direction to each, at six
+different strengths. Every panel below is:
+
+```
+row r, column c   =   G( random_z[r]  +  alpha[c] * direction )
+
+    4 rows    = 4 unrelated starting digits (each row is one random z)
+    6 columns = 6 strengths, alpha = -1.0 -0.5  0  +0.5 +1.0 +1.5
+    alpha = 0 = the starting digit, untouched  (boxed in red below)
+```
+
+So read it **left to right**: leftward is subtracting the direction, rightward is adding
+it. The boxed middle column is where each row started.
 """)
 
 code("""
@@ -500,29 +519,57 @@ def latent_direction(a, b):
 
 direction = latent_direction(8, 1)          # the "closed loops" direction
 
+ALPHAS = [-1.0, -0.5, 0.0, 0.5, 1.0, 1.5]
+ZERO   = ALPHAS.index(0.0)                  # the untouched column
+BOT    = "#d1495b"
+
 torch.manual_seed(5)
-base = torch.randn(4, Z_DIM, device=DEV)
-scales = torch.tensor([-1.0, -0.5, 0.0, 0.5, 1.0, 1.5], device=DEV).view(-1, 1)
-fig, axes = plt.subplots(4, 6, figsize=(8, 6))
+base   = torch.randn(4, Z_DIM, device=DEV)
+scales = torch.tensor(ALPHAS, device=DEV).view(-1, 1)
+
+fig, axes = plt.subplots(4, 6, figsize=(10.5, 8.4))
 for r in range(4):
     with torch.no_grad():
         row = G(base[r:r+1] + scales * direction)
     pl = probe_clf.predict(to_flat(row))
     for c, im in enumerate(row):
-        axes[r, c].imshow(im[0].cpu(), cmap="gray"); axes[r, c].axis("off")
-        axes[r, c].set_title(f"{pl[c]}", fontsize=9)
-plt.suptitle("ONE direction (mean z of '8' minus mean z of '1') added to four unrelated digits"
-             "   |   titles = what the classifier now thinks it is", y=1.0)
-plt.tight_layout(); plt.show()
+        ax = axes[r, c]
+        ax.imshow(im[0].cpu(), cmap="gray")
+        ax.set_xticks([]); ax.set_yticks([])     # not axis("off") - we still want labels
+        for sp in ax.spines.values():
+            sp.set_edgecolor(BOT if c == ZERO else "#cccccc")
+            sp.set_linewidth(2.6 if c == ZERO else 0.8)
+        changed = pl[c] != pl[ZERO]
+        ax.set_xlabel(f"reads as {pl[c]}", fontsize=9.5,
+                      weight="bold" if changed else "normal",
+                      color=BOT if changed else "#777", labelpad=2)
+    axes[r, 0].set_ylabel(f"starts as {pl[ZERO]}", fontsize=10.5,
+                          weight="bold", labelpad=6)
+
+for c, a in enumerate(ALPHAS):
+    axes[0, c].set_title("UNTOUCHED  (alpha = 0)" if c == ZERO else f"alpha = {a:+.1f}",
+                         fontsize=11, weight="bold",
+                         color=BOT if c == ZERO else "#333", pad=8)
+
+fig.suptitle("ONE direction (mean z of '8' minus mean z of '1'), added to four unrelated digits",
+             fontsize=13.5, weight="bold", y=0.985)
+fig.text(0.5, 0.945, "each row = one random z   |   left = subtract the direction, "
+                     "right = add it   |   red box = that row's starting digit",
+         ha="center", fontsize=10.5, style="italic", color="#555")
+fig.text(0.5, 0.028, "<--  subtracting the direction        "
+                     "adding the direction  -->", ha="center",
+         fontsize=12, weight="bold", color="#333")
+plt.tight_layout(rect=[0, 0.045, 1, 0.93], h_pad=1.5, w_pad=0.4); plt.show()
 """)
 
 md("""
 **One vector. Added to unrelated inputs. Consistent semantic change.**
 
 Note what it actually learned though — it is not a clean "make this an 8" button. It is
-closer to a **"close the loops"** direction: 1s become 8s, but 7s drift toward 0s. The
-direction captured something real and slightly more general than the label we used to
-find it.
+closer to a **"close the loops"** direction. Adding it closes loops: the 1 in row 2
+becomes an 8, and both 9s become an 8 or a 0. Subtracting it opens them back up: those
+same 9s unwind into a 1 and a 7. The direction captured something real and more general
+than the label we used to find it.
 
 That imprecision is worth flagging now, because it recurs for the rest of the talk. Same
 caveat as `king − man + woman` giving you `queen` but also `princess` and `monarch`. And
