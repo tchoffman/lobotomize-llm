@@ -82,7 +82,7 @@ Against a 60-minute slot that leaves ~14 min for Q&A and drift.
 | 34 | talk | Now let me undercut all of it |
 | 35 | talk | &#9208; ⏸ OPTIONAL — cut this if you are behind the clock  *(~5 min)* |
 | 36 | **run** | &#9208; `from transformers import AutoTokenizer, AutoModelForCausalLM` |
-| 37 | talk | &#9208; Watch the last column |
+| 37 | talk | &#9208; Ignore the whole table except the last column |
 | 38 | **run** | &#9208; `logit_lens("The Golden Gate Bridge is in San")` |
 | 39 | talk | &#9208; And this is why the real paper trains a whole LLM for the job |
 

@@ -1232,20 +1232,41 @@ unembedding matrix reads from, so just... **decode it early**. This is the *logi
 """)
 
 code("""
+N_LAYER = gpt2.config.n_layer
+
 @torch.no_grad()
 def logit_lens(text, every=3):
-    ids = tok(text, return_tensors="pt").to(DEV)
-    hs = gpt2(**ids, output_hidden_states=True).hidden_states
+    ids  = tok(text, return_tensors="pt").to(DEV)
+    hs   = gpt2(**ids, output_hidden_states=True).hidden_states
     toks = [tok.decode([t]) for t in ids["input_ids"][0]]
-    n_layer = gpt2.config.n_layer
-    print(f"{'layer':>6} | " + " | ".join(f"{t.strip()[:9]:>9}" for t in toks))
-    print("-" * (8 + 12 * len(toks)))
-    for layer in list(range(0, n_layer, every)) + [n_layer]:
+
+    def top_words(layer):
         # NB: HF already applies ln_f to the LAST hidden state - don't normalise it twice
-        h = hs[layer] if layer == n_layer else gpt2.transformer.ln_f(hs[layer])
-        best = (h @ gpt2.lm_head.weight.T).argmax(-1)[0]
-        print(f"{layer:>6} | " + " | ".join(
-            f"{tok.decode([b]).strip()[:9]:>9}" for b in best))
+        h = hs[layer] if layer == N_LAYER else gpt2.transformer.ln_f(hs[layer])
+        return [tok.decode([b]).strip()[:9]
+                for b in (h @ gpt2.lm_head.weight.T).argmax(-1)[0]]
+
+    print(f'INPUT:  "{text}"')
+    print()
+    print("Every cell answers the SAME question: if we stopped the model right here")
+    print("and forced it to answer, what word would it say comes next?")
+    print()
+    print("   columns = how far into the sentence we are")
+    print(f"   rows    = how deep into the model  (layer {N_LAYER} is the real answer;")
+    print("             everything above it is a half-finished thought)")
+    print()
+    last = 9 + 12 * (len(toks) - 1)                    # left edge of the final column
+    print(f"{'layer':>6} | " + " | ".join(f"{t.strip()[:9]:>9}" for t in toks))
+    print("-" * (last + 9))
+    trace = []
+    for layer in list(range(0, N_LAYER, every)) + [N_LAYER]:
+        w = top_words(layer)
+        trace.append(f"L{layer} {w[-1]}")
+        print(f"{layer:>6} | " + " | ".join(f"{x:>9}" for x in w))
+    print(" " * last + "^" * 9)
+    print(" " * last + "THIS is the prediction that counts")
+    print()
+    print("making up its mind, with depth:   " + "  ->  ".join(trace))
 
 logit_lens("The Eiffel Tower is located in the city of")
 """)
@@ -1261,9 +1282,12 @@ layer  9  ->  Rome
 layer 12  ->  Paris
 ```
 
-It starts with "somewhere European", narrows to "a European capital", and only lands on
-Paris at the end. We are reading a computation **in progress** — no training, no probe,
-just the model's own unembedding matrix applied early.
+It gets *the right kind of thing* before it gets the right thing: first a European place
+name — England is not even a city — then specifically a city, then the correct city. The
+answer was narrowed down, not looked up, and we just watched it narrow.
+
+We are reading a computation **in progress** — no training, no probe, just the model's own
+unembedding matrix applied early.
 """)
 
 code("""

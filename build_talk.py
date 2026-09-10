@@ -742,8 +742,19 @@ a step in the argument. **Skip straight to Part 4 if you are short on time.**
 
 #### A verbalizer you can run on a laptop: the logit lens
 
-The cheapest possible activation-to-text. The residual stream lives in the same space the
-unembedding matrix reads from, so just... **decode it early.**
+**The argument:** an NLA's verbalizer turns an activation into English, and training one
+takes joint RL across two full copies of the model. But there is a free, stupid version of
+the same idea, and it is worth two minutes because it makes *"you can get words out of an
+activation"* concrete instead of abstract.
+
+Here is the trick. At the very end, a transformer turns its final activation into a word by
+multiplying it by one matrix. Every layer's activation lives in **that same space** — that
+is what the residual stream being a running total buys you. So nothing stops you from
+reaching into the *middle* of the model, grabbing a half-finished activation, and
+multiplying it by that same final matrix.
+
+The model is not done thinking at layer 6. Do it anyway, and out comes the word it *would*
+have blurted if you had cut it off there.
 """)
 
 code("""
@@ -753,36 +764,78 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 tok  = AutoTokenizer.from_pretrained("gpt2"); tok.pad_token = tok.eos_token
 gpt2 = AutoModelForCausalLM.from_pretrained("gpt2").to(DEV).eval()
 
+N_LAYER = gpt2.config.n_layer
+
 @torch.no_grad()
 def logit_lens(text, every=3):
-    ids = tok(text, return_tensors="pt").to(DEV)
-    hs = gpt2(**ids, output_hidden_states=True).hidden_states
+    ids  = tok(text, return_tensors="pt").to(DEV)
+    hs   = gpt2(**ids, output_hidden_states=True).hidden_states
     toks = [tok.decode([t]) for t in ids["input_ids"][0]]
-    n_layer = gpt2.config.n_layer
-    print(f"{'layer':>6} | " + " | ".join(f"{t.strip()[:9]:>9}" for t in toks))
-    print("-" * (8 + 12 * len(toks)))
-    for layer in list(range(0, n_layer, every)) + [n_layer]:
+
+    def top_words(layer):
         # NB: HF already applies ln_f to the LAST hidden state - don't normalise it twice
-        h = hs[layer] if layer == n_layer else gpt2.transformer.ln_f(hs[layer])
-        best = (h @ gpt2.lm_head.weight.T).argmax(-1)[0]
-        print(f"{layer:>6} | " + " | ".join(
-            f"{tok.decode([b]).strip()[:9]:>9}" for b in best))
+        h = hs[layer] if layer == N_LAYER else gpt2.transformer.ln_f(hs[layer])
+        return [tok.decode([b]).strip()[:9]
+                for b in (h @ gpt2.lm_head.weight.T).argmax(-1)[0]]
+
+    print(f'INPUT:  "{text}"')
+    print()
+    print("Every cell answers the SAME question: if we stopped the model right here")
+    print("and forced it to answer, what word would it say comes next?")
+    print()
+    print("   columns = how far into the sentence we are")
+    print(f"   rows    = how deep into the model  (layer {N_LAYER} is the real answer;")
+    print("             everything above it is a half-finished thought)")
+    print()
+    last = 9 + 12 * (len(toks) - 1)                    # left edge of the final column
+    print(f"{'layer':>6} | " + " | ".join(f"{t.strip()[:9]:>9}" for t in toks))
+    print("-" * (last + 9))
+    trace = []
+    for layer in list(range(0, N_LAYER, every)) + [N_LAYER]:
+        w = top_words(layer)
+        trace.append(f"L{layer} {w[-1]}")
+        print(f"{layer:>6} | " + " | ".join(f"{x:>9}" for x in w))
+    print(" " * last + "^" * 9)
+    print(" " * last + "THIS is the prediction that counts")
+    print()
+    print("making up its mind, with depth:   " + "  ->  ".join(trace))
 
 logit_lens("The Eiffel Tower is located in the city of")
 """)
 
 md("""
-#### Watch the last column
+#### Ignore the whole table except the last column
 
-That is the model's guess about the next word, at each depth. It starts somewhere vague
-and European, narrows, and only commits to **Paris** near the end.
+Most of that grid is junk, and that is fine — the other columns are the model guessing the
+next word from halfway through *"The Eiffel Tow..."*, which is a question nobody asked.
 
-We are reading a computation **in progress** — no training, no probe, just the model's own
-unembedding matrix applied early.
+**The last column is the one that counts.** It sits over `of`, so it is the model's actual
+answer to *"the city of ___"*. Read it downward:
+
+| depth | it would have said | |
+|---|---|---|
+| layer 0 | `destro` | junk — the word has barely been embedded |
+| layer 3 | `the` | still junk |
+| layer 6 | **England** | a European place... but not even a *city* yet |
+| layer 9 | **Rome** | a European **city** now. Wrong one. |
+| layer 12 | **Paris** | |
+
+Read those three real answers again: **England → Rome → Paris.** Not "Europe" then "Paris".
+It gets *the right kind of thing* before it gets the right thing — first a European place
+name, then specifically a city, then the correct city.
+
+The answer was never looked up. It was **narrowed down**, and we just watched it narrow.
+
+No training. No probe. No labelled data. Just the model's own final matrix, applied early.
+That is an activation turned into English — which is the thing NLAs do, in the crudest
+possible form.
 """)
 
 code("""
 logit_lens("The Golden Gate Bridge is in San")
+
+# Contrast: an easy fact does not need the whole model. "San" -> "Francisco" is locked in
+# by layer 6 and never wavers.
 """)
 
 md("""
