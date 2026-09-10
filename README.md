@@ -56,9 +56,10 @@ jupyter nbconvert --to notebook --execute \
   --ExecutePreprocessor.kernel_name=lobotomy --output executed_talk.ipynb talk.ipynb
 ```
 
-Both notebooks execute clean with 0 errors. `talk.ipynb` is **116.5 s of live compute**,
-91.5 s of which is the Part 4 layer sweep — and that one streams a line per layer as it
-goes, so it is narratable rather than a frozen screen.
+Both notebooks execute clean with 0 errors. `talk.ipynb` is **~180 s of live compute**,
+139 s of which is Part 4 — the layer sweep plus three passes over the prompt list. Those
+all stream a line at a time as they go, so they are narratable rather than a frozen
+screen.
 
 Then set `HF_HUB_OFFLINE=1` on the day so flaky conference wifi can't stall a
 `from_pretrained` call mid-demo.
