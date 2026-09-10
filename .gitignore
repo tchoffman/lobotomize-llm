@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+data/MNIST/
+data/acts_*.npz
+.DS_Store
+executed.ipynb
