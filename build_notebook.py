@@ -607,9 +607,10 @@ md("""
 ### First attempt: no constraints at all""")
 
 code("""
+pixel_results = {d: invert(d, tv_weight=0.0) for d in range(10)}   # kept for the recap
+
 fig, axes = plt.subplots(1, 10, figsize=(14, 2))
-for d in range(10):
-    im, conf = invert(d, tv_weight=0.0)
+for d, (im, conf) in pixel_results.items():
     axes[d].imshow(im, cmap="gray"); axes[d].axis("off")
     axes[d].set_title(f"{d}\\n{conf:.1%}", fontsize=9)
 plt.suptitle("Unconstrained gradient ascent — the model is VERY confident", y=1.15); plt.show()
@@ -671,14 +672,31 @@ def invert_via_generator(target, steps=300, lr=0.05, z_reg=0.02, seed=0):
         conf = clf(img).softmax(1)[0, target].item()
     return img.detach()[0, 0].cpu(), conf
 
-fig, axes = plt.subplots(2, 10, figsize=(14, 3.4))
-for row, seed in enumerate((0, 1)):
-    for d in range(10):
-        im, conf = invert_via_generator(d, seed=seed)
+latent_results = {d: invert_via_generator(d, seed=0) for d in range(10)}
+
+fig, axes = plt.subplots(1, 10, figsize=(14, 2))
+for d, (im, conf) in latent_results.items():
+    axes[d].imshow(im, cmap="gray"); axes[d].axis("off")
+    axes[d].set_title(f"{d}\\n{conf:.1%}", fontsize=9)
+plt.suptitle("Same classifier, same objective, searched inside the generator", y=1.15)
+plt.show()
+""")
+
+code("""
+fig, axes = plt.subplots(2, 10, figsize=(14, 3.9))
+for d in range(10):
+    for row, res in enumerate((pixel_results, latent_results)):
+        im, conf = res[d]
         axes[row, d].imshow(im, cmap="gray"); axes[row, d].axis("off")
-        axes[row, d].set_title(f"{d}   {conf:.0%}", fontsize=8)
-plt.suptitle("\\"Draw me a 4\\" — gradient ascent through a learned prior "
-             "(two different random starts)", y=1.03)
+        axes[row, d].set_title(f"{conf:.0%}", fontsize=10, weight="bold",
+                               color="crimson" if row == 0 else "seagreen")
+axes[0, 0].text(-0.18, 0.5, "searched\\nPIXELS", transform=axes[0, 0].transAxes,
+                ha="right", va="center", fontsize=11, weight="bold", color="crimson")
+axes[1, 0].text(-0.18, 0.5, "searched\\nLATENTS", transform=axes[1, 0].transAxes,
+                ha="right", va="center", fontsize=11, weight="bold", color="seagreen")
+plt.suptitle("Identical model. Identical objective. Identical confidence." + chr(10) +
+             "The only difference is WHERE we searched.",
+             y=1.12, fontsize=14, weight="bold")
 plt.tight_layout(); plt.show()
 """)
 
@@ -697,9 +715,13 @@ diagram.
 ### Try your own — pick a class, pick a starting seed""")
 
 code("""
-im, conf = invert_via_generator(target=8, seed=7)
-plt.figure(figsize=(3, 3)); plt.imshow(im, cmap="gray"); plt.axis("off")
-plt.title(f"asked for an 8 — classifier says {conf:.0%}"); plt.show()
+TARGET = 8
+fig, axes = plt.subplots(1, 5, figsize=(9, 2.2))
+for ax, seed in zip(axes, range(5)):
+    im, conf = invert_via_generator(TARGET, seed=seed)
+    ax.imshow(im, cmap="gray"); ax.axis("off"); ax.set_title(f"{conf:.0%}", fontsize=9)
+plt.suptitle(f"asked for a {TARGET} from five different random starts", y=1.06)
+plt.tight_layout()
 """)
 
 md("""
