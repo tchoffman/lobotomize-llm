@@ -42,7 +42,7 @@ Against a 60-minute slot that leaves ~14 min for Q&A and drift.
 
 | # | do | beat |
 |---|---|---|
-| 7 | talk | Part 1: Compression — the one architecture this talk needs |
+| 7 | talk | Part 1: Compression |
 | 8 | **run** | `from torchvision import datasets, transforms` |
 | 9 | **run** | `class AutoEncoder(nn.Module):` |
 | 10 | talk | The same thing, drawn |
@@ -80,7 +80,7 @@ Against a 60-minute slot that leaves ~14 min for Q&A and drift.
 | 32 | talk | The case study: Claude plans its rhymes |
 | 33 | talk | The payoff: catching something the model never said |
 | 34 | talk | Now let me undercut all of it |
-| 35 | talk | &#9208; ⏸ OPTIONAL — cut this if you are behind the clock  *(~5 min)* |
+| 35 | talk | &#9208; ⏸ Optional |
 | 36 | **run** | &#9208; `from transformers import AutoTokenizer, AutoModelForCausalLM` |
 | 37 | talk | &#9208; Ignore the whole table except the last column |
 | 38 | **run** | &#9208; `logit_lens("The Golden Gate Bridge is in San")` |
@@ -99,7 +99,7 @@ Against a 60-minute slot that leaves ~14 min for Q&A and drift.
 | 46 | talk | Step 1 — screen the prompts on the intact model |
 | 47 | **run** | `mask_h = refuses(HARMFUL, show=True)` |
 | 48 | **run** | `mask_b = refuses(BENIGN, show=True)` |
-| 49 | talk | Aside worth calling out: |
+| 49 | talk | The ones it wrongly refuses. |
 | 50 | **run** | `usable = [i for i in range(len(PAIRS)) if mask_h[i] and not mask_b...` |
 | 51 | talk | Step 2 — difference in means. That's the whole method. |
 | 52 | **run** | `@torch.no_grad()` |
@@ -128,7 +128,7 @@ Against a 60-minute slot that leaves ~14 min for Q&A and drift.
 | 1 | We squeeze an image through a two-number bottleneck to see that forced compression makes a model store meaning rather than pixels. |
 | 2 | We find a single direction in that compressed space and add it to unrelated digits, which turns changing meaning into plain arithmetic. |
 | 3 | We swap the bottleneck from numbers to English, which makes a model's internal state readable — and lets Anthropic catch thoughts the model never says out loud. |
-| 4 | We find the one direction that means *I should decline*, delete it, and watch a model's safety training stop existing. |
+| 4 | We find the one direction that means <em>I should decline</em>, delete it, and watch a model's safety training stop existing. |
 | 5 | We come back to the cold open now holding a way to read a model's state instead of interviewing it. |
 
 ---

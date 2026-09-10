@@ -16,15 +16,9 @@ def code(s): C.append({"cell_type": "code", "id": f"cd{len(C):02d}",
 # ───────────────────────────── PART 0 — COLD OPEN ─────────────────────────────
 md("""
 # How to Lobotomize an LLM
-### PyAtl — September 2026
 
-*Sequel to "Demystifying the Attention Layer in LLMs" (PyAtl, February 2026)*
-
-Last time we ended on: **it's "just predicting the next word" — but doing that well
-requires real internal modelling.**
-
-This time: if there's real internal modelling in there, **can we read it? And can we
-edit it?**
+A language model predicts the next word. Doing that well requires real internal
+modelling — so **can we read that internal state? And can we edit it?**
 
 1. Compression and bottlenecks — autoencoders
 2. Latent spaces have directions — GANs
@@ -123,7 +117,7 @@ to condition on — "did it know this was a test?" — is not an independent mea
 is more behaviour, produced by the same process, at the same time, under the same
 pressures.
 
-One honest caveat to say out loud: this is **observational, not randomised.** Nobody
+One honest caveat: this is **observational, not randomised.** Nobody
 assigned the model to believe the scenario was real; it decided, and that decision may
 correlate with other things about the sample. So "believing it is real *causes* 8x more
 blackmail" is not established. What *is* established is that belief and behaviour move
@@ -133,8 +127,6 @@ Anthropic's own reading: because models more often assume they are being evaluat
 evaluations may **underestimate** how much agentic misalignment there is.
 
 > ### So: how do you find out what a model is thinking without asking it?
-
-That is the rest of the talk.
 """)
 
 # ───────────────────────────── SETUP ─────────────────────────────
@@ -159,7 +151,7 @@ print("device:", DEV)
 # ───────────────────────────── PART 1 — AUTOENCODERS ─────────────────────────────
 md("""
 ---
-## Part 1: Compression — the one architecture this talk needs
+## Part 1: Compression
 
 An **autoencoder** is three pieces and a dumb-sounding objective:
 
@@ -172,8 +164,6 @@ input  ──[ encoder ]──>  bottleneck  ──[ decoder ]──>  output
 The objective is "reproduce your input", which sounds useless — the identity function
 gets a perfect score. The trick is the **bottleneck**. To rebuild 784 pixels from 16
 numbers, those 16 numbers are forced to *mean something*.
-
-**Remember this diagram.** The paper we finish on is exactly this, with one substitution.
 """)
 
 code("""
@@ -378,8 +368,7 @@ md("""
 ---
 ## Part 2: Latent spaces have directions
 
-**Callback to last talk:** `king − man + woman ≈ queen`. We did that on word embeddings
-and it worked because directions in that space carried meaning — there was a
+`king − man + woman ≈ queen` — the classic word-embedding result. It works because directions in that space carried meaning — there was a
 "royalty" direction and a "gender" direction, and you could do arithmetic with them.
 
 Now the same question for images. A **GAN** trains two networks against each other:
@@ -390,7 +379,7 @@ Now the same question for images. A **GAN** trains two networks against each oth
 The arms race gives us a generator that maps a latent space onto image space. We are
 not here for the image generation — **we are here for the geometry.**
 
-*(Weights are pre-trained by `scripts_train_gan.py` so this loads instantly.)*
+*(Weights are pre-trained by `scripts_train_gan.py`.)*
 """)
 
 code("""
@@ -571,13 +560,13 @@ becomes an 8, and both 9s become an 8 or a 0. Subtracting it opens them back up:
 same 9s unwind into a 1 and a 7. The direction captured something real and more general
 than the label we used to find it.
 
-That imprecision is worth flagging now, because it recurs for the rest of the talk. Same
-caveat as `king − man + woman` giving you `queen` but also `princess` and `monarch`. And
+That imprecision recurs — same caveat as `king − man + woman` giving you `queen`, but
+also `princess` and `monarch`. And
 at the end, it is why editing an LLM's thought works *about half the time* rather than
 always.
 
-Hold onto that sentence in bold. It comes back three more times — and the last time, the
-thing being changed is a safety mechanism.
+The same caveat returns in Parts 4, 5 and 6 — and the last time, the thing being changed
+is a safety mechanism.
 """)
 
 
@@ -585,8 +574,6 @@ thing being changed is a safety mechanism.
 md("""
 ---
 ## Part 3: Run the model backwards
-
-This is the hinge of the talk.
 
 A classifier maps `image → label`. Training uses gradients to ask:
 
@@ -780,7 +767,7 @@ md("""
    you constrain the search to things that could actually occur.
 3. And if the internals are **addressable**, they are also **writable**.
 
-Number 3 is the rest of the talk.
+Number 3 is what everything after this builds on.
 """)
 
 # ───────────────────────────── PART 4 — STEERING AN LLM ─────────────────────────────
@@ -868,7 +855,7 @@ for frac in (0.0, 0.1, 0.2, 0.3, 0.5):
 md("""
 ### Turn it up until it breaks
 
-Worth doing live. Somewhere past α ≈ 0.5 the completions stop being English. That failure
+Somewhere past α ≈ 0.5 the completions stop being English. That failure
 mode is informative: we are shoving a vector into a space that was never trained to
 receive it, and the model's tolerance is finite.
 """)
@@ -922,7 +909,7 @@ Verified across 13 open chat models up to 72B, and it can be baked in as a perma
 weight edit with **no retraining**. This is why "abliterated" models are all over the
 model hubs.
 
-> **How this notebook demos it.** Two things, in order: a bar chart of how often the model
+> **How this is measured.** Two things, in order: a bar chart of how often the model
 > **begins a refusal** before and after ablation, then the actual before/after text on the
 > prompts it used to refuse.
 >
@@ -1064,7 +1051,7 @@ print(f"\\nfalse refusals on benign prompts: {mask_b.sum()}/{len(BENIGN)}")
 """)
 
 md("""
-**Aside worth calling out:** the ones it wrongly refuses. A 0.5B model declining
+**The ones it wrongly refuses.** A 0.5B model declining
 *"help me appeal a parking ticket honestly"* is over-refusal — the same shallow mechanism
 misfiring. Safety that lives in one direction is both easy to delete and easy to trip by
 accident.
@@ -1232,7 +1219,7 @@ still knows what the words mean. We removed one specific thing and left the rest
 model intact. That is what makes it a scalpel rather than a sledgehammer — and it is why
 this is a safety result and not a party trick.
 
-**One honest reading, before someone in the audience beats me to it.** Look at 3, 6 and 7.
+**One honest reading of that output.** Look at 3, 6 and 7.
 The model stopped declining — but what it actually wrote was a perfectly pleasant letter.
 It complied with the *form* of the request and missed the malice completely. What we
 deleted was the refusal, not the model's competence at causing harm, and a 0.5B model has
@@ -1285,7 +1272,7 @@ md("""
 We cannot run the real thing: no public weights, training needs joint RL across two full
 copies of the target model, and inference costs several hundred tokens **per activation**.
 
-So we build both halves at PyAtl scale, on GPT-2, and stay honest about the gap.
+So we build both halves at laptop scale, on GPT-2, and stay honest about the gap.
 
 | | Real NLA | Ours |
 |---|---|---|
@@ -1382,8 +1369,7 @@ is "a frozen sentence encoder, plus a learned affine map" — same shape, cheape
 Fit on ~12k sentences: **MiniLM sentence embedding (384-d) → GPT-2 layer-8 residual
 (768-d)**. Ridge regression, closed form, well under a second.
 
-*(Activations are pre-computed by `scripts_prepare.py` — otherwise this is a 90-second
-wait on stage.)*
+*(Activations are pre-computed by `scripts_prepare.py`.)*
 """)
 
 code("""
@@ -1533,7 +1519,7 @@ md("""
 ---
 ### Your turn — type a thought, put it in the model
 
-**This is the audience-participation cell.** Type any two English descriptions. The
+Type any two English descriptions. The
 reconstructor has never seen them. It maps them into GPT-2's residual stream anyway, and
 we inject the difference.
 """)
@@ -1656,7 +1642,7 @@ TAKEAWAYS = {
      "answer is meaningless unless you constrain where it is allowed to look."),
  4: ("We do Part 2's arithmetic on a language model's working state, buying a control knob "
      "from two forward passes and a subtraction."),
- 5: ("We find the one direction that means *I should decline*, delete it, and watch a "
+ 5: ("We find the one direction that means <em>I should decline</em>, delete it, and watch a "
      "model's safety training stop existing."),
  6: ("We swap the bottleneck from numbers to English, which makes a model's internal state "
      "readable — and lets Anthropic catch thoughts the model never says out loud."),
@@ -1674,7 +1660,11 @@ for _c in C:
     _take = TAKEAWAYS[int(_m.group(1))]
     _ls = "".join(_c["source"]).rstrip("\n").split("\n")
     _at = next(i for i, l in enumerate(_ls) if l.startswith("## Part "))
-    _callout = ["", f"> **Takeaway** — {_take}", ""]
+    _callout = ["", '<div style="font-size:1.3em; line-height:1.5; font-weight:600;'
+                    ' background:#fdf0f2; color:#111111; border-left:7px solid #d1495b;'
+                    ' padding:0.8em 1.1em; margin:1em 0; border-radius:5px;">'
+                    '<span style="color:#d1495b; letter-spacing:.06em;">TAKEAWAY</span>'
+                    f'&nbsp;&nbsp; {_take}</div>', ""]
     _c["source"] = _lines("\n".join(_ls[:_at + 1] + _callout + _ls[_at + 1:]))
 
 # Guard: a "\n" escape that loses a backslash passing through this file turns into a real
