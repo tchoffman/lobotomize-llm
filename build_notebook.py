@@ -1645,38 +1645,23 @@ nb = {"cells": C, "metadata": {"kernelspec": {"display_name": "Python (lobotomiz
 # One TL;DR + ELI5 under each Part heading. Applied as a post-process so the
 # callouts survive any reordering of the cells above.
 TAKEAWAYS = {
- 0: ("You cannot measure a mind by interviewing it. Asking changes the answer, and the "
-     "answer tracks the behaviour.",
-     "A student behaves differently when they think the teacher is watching. Now imagine "
-     "the only way to find out whether they think they're being watched is to ask them."),
- 1: ("Force information through a narrow gap and it is obliged to become meaningful. "
-     "What survives the squeeze is what mattered.",
-     "Describe a photo to a friend using two numbers, and have them redraw it. You would "
-     "be forced to pick two numbers that actually count."),
- 2: ("A trained network turns meaning into geometry. And once meaning is geometry, "
-     "editing is arithmetic.",
-     "If \"add loops\" is a direction you can walk in, you can walk *any* digit in that "
-     "direction. Find the direction, add it."),
- 3: ("Models run in reverse, so their insides are addressable — but the answer only means "
-     "something if you constrain the search to things that could actually occur.",
-     "Ask the model to draw its idea of a 3. Let it draw anything and you get TV static it "
-     "is 100% sure about. Hand it a pen that can only draw digits, and you get a 3."),
- 4: ("An LLM's working state is a vector, and vectors can be added to. Two forward passes "
-     "and a subtraction buy you a control knob.",
-     "The model mutters notes to itself as it reads. Slip an extra note into the pile and "
-     "it writes something different."),
- 5: ("Refusal is mediated by roughly one direction in activation space, which means "
-     "alignment is far shallower than the effort that went into building it.",
-     "You would expect \"don't help with harmful things\" to be woven through the whole "
-     "model. It is closer to a single wire. Cut it and the model stops saying no."),
- 6: ("Make the bottleneck English and the compressed state becomes readable by "
-     "construction — and then editable.",
-     "Instead of squeezing a thought down to 32 numbers, squeeze it into a sentence. Now "
-     "you can read it, change one word, and push it back in."),
- 7: ("We can now read some of what a model is thinking without asking it. Badly, "
-     "expensively, and about half the time.",
-     "We got a window into the machine. It is small, smudged, and it sometimes makes "
-     "things up. It is still a window where there was not one."),
+ 0: ("We watch a model's claim about whether it is being tested and its actual behaviour "
+     "move together — which is why you cannot find out what a model is thinking by asking "
+     "it."),
+ 1: ("We squeeze an image through a two-number bottleneck to see that forced compression "
+     "makes a model store meaning rather than pixels."),
+ 2: ("We find a single direction in that compressed space and add it to unrelated digits, "
+     "which turns changing meaning into plain arithmetic."),
+ 3: ("We run an image classifier backwards to draw its idea of a digit, and find out why the "
+     "answer is meaningless unless you constrain where it is allowed to look."),
+ 4: ("We do Part 2's arithmetic on a language model's working state, buying a control knob "
+     "from two forward passes and a subtraction."),
+ 5: ("We find the one direction that means *I should decline*, delete it, and watch a "
+     "model's safety training stop existing."),
+ 6: ("We swap the bottleneck from numbers to English, which makes a model's internal state "
+     "readable — and lets Anthropic catch thoughts the model never says out loud."),
+ 7: ("We come back to the cold open now holding a way to read a model's state instead of "
+     "interviewing it."),
 }
 
 import re as _re
@@ -1686,10 +1671,10 @@ for _c in C:
     _m = _re.search(r"^## Part (\d):", "".join(_c["source"]), _re.M)
     if not _m:
         continue
-    _tldr, _eli5 = TAKEAWAYS[int(_m.group(1))]
+    _take = TAKEAWAYS[int(_m.group(1))]
     _ls = "".join(_c["source"]).rstrip("\n").split("\n")
     _at = next(i for i, l in enumerate(_ls) if l.startswith("## Part "))
-    _callout = ["", f"> **TL;DR** — {_tldr}", ">", f"> **ELI5** — {_eli5}", ""]
+    _callout = ["", f"> **Takeaway** — {_take}", ""]
     _c["source"] = _lines("\n".join(_ls[:_at + 1] + _callout + _ls[_at + 1:]))
 
 # Guard: a "\n" escape that loses a backslash passing through this file turns into a real

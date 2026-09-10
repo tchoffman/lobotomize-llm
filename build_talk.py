@@ -1269,30 +1269,19 @@ nb = {"cells": C, "metadata": {"kernelspec": {"display_name": "Python (lobotomiz
 # One TL;DR + ELI5 under each Part heading. Applied as a post-process so the
 # callouts survive any reordering of the cells above.
 TAKEAWAYS = {
- 0: ("You cannot measure a mind by interviewing it. Asking changes the answer, and the "
-     "answer tracks the behaviour.",
-     "A student behaves differently when they think the teacher is watching. Now imagine "
-     "the only way to find out whether they think they're being watched is to ask them."),
- 1: ("Force information through a narrow gap and it is obliged to become meaningful. "
-     "What survives the squeeze is what mattered.",
-     "Describe a photo to a friend using two numbers, and have them redraw it. You would "
-     "be forced to pick two numbers that actually count."),
- 2: ("A trained network turns meaning into geometry. And once meaning is geometry, "
-     "editing is arithmetic.",
-     "If \"add loops\" is a direction you can walk in, you can walk *any* digit in that "
-     "direction. Find the direction, add it."),
- 3: ("Make the bottleneck English and the compressed state becomes readable by "
-     "construction — so you can catch a thought the model never said out loud.",
-     "Instead of squeezing a thought down to 32 numbers, squeeze it into a sentence. Now "
-     "you can read it, change one word, and push it back in."),
- 4: ("Refusal is mediated by roughly one direction in activation space, which means "
-     "alignment is far shallower than the effort that went into building it.",
-     "You would expect \"don't help with harmful things\" to be woven through the whole "
-     "model. It is closer to a single wire. Cut it and the model stops saying no."),
- 5: ("We can now read some of what a model is thinking without asking it. Badly, "
-     "expensively, and about half the time.",
-     "We got a window into the machine. It is small, smudged, and it sometimes makes "
-     "things up. It is still a window where there was not one."),
+ 0: ("We watch a model's claim about whether it is being tested and its actual behaviour "
+     "move together — which is why you cannot find out what a model is thinking by asking "
+     "it."),
+ 1: ("We squeeze an image through a two-number bottleneck to see that forced compression "
+     "makes a model store meaning rather than pixels."),
+ 2: ("We find a single direction in that compressed space and add it to unrelated digits, "
+     "which turns changing meaning into plain arithmetic."),
+ 3: ("We swap the bottleneck from numbers to English, which makes a model's internal state "
+     "readable — and lets Anthropic catch thoughts the model never says out loud."),
+ 4: ("We find the one direction that means *I should decline*, delete it, and watch a "
+     "model's safety training stop existing."),
+ 5: ("We come back to the cold open now holding a way to read a model's state instead of "
+     "interviewing it."),
 }
 
 import re as _re
@@ -1302,10 +1291,10 @@ for _c in C:
     _m = _re.search(r"^## Part (\d):", "".join(_c["source"]), _re.M)
     if not _m:
         continue
-    _tldr, _eli5 = TAKEAWAYS[int(_m.group(1))]
+    _take = TAKEAWAYS[int(_m.group(1))]
     _ls = "".join(_c["source"]).rstrip("\n").split("\n")
     _at = next(i for i, l in enumerate(_ls) if l.startswith("## Part "))
-    _callout = ["", f"> **TL;DR** — {_tldr}", ">", f"> **ELI5** — {_eli5}", ""]
+    _callout = ["", f"> **Takeaway** — {_take}", ""]
     _c["source"] = _lines("\n".join(_ls[:_at + 1] + _callout + _ls[_at + 1:]))
 
 # Guard: a "\n" escape that loses a backslash passing through this file turns into a real
@@ -1386,9 +1375,9 @@ for i, p, opt, kind, lab in rows:
     out.append(f"| {i} | {do} | {'&#9208; ' if opt else ''}{lab} |")
 
 out += ["", "---", "", "## Takeaways at a glance", "",
-        "| Part | TL;DR |", "|---|---|"]
+        "| Part | Takeaway |", "|---|---|"]
 for p in sorted(TAKEAWAYS):
-    out.append(f"| {p} | {TAKEAWAYS[p][0]} |")
+    out.append(f"| {p} | {TAKEAWAYS[p]} |")
 out += ["", "---", "", "## Pre-flight", "",
         "```",
         "python build_talk.py                       # regenerate talk.ipynb",

@@ -122,14 +122,14 @@ Against a 60-minute slot that leaves ~14 min for Q&A and drift.
 
 ## Takeaways at a glance
 
-| Part | TL;DR |
+| Part | Takeaway |
 |---|---|
-| 0 | You cannot measure a mind by interviewing it. Asking changes the answer, and the answer tracks the behaviour. |
-| 1 | Force information through a narrow gap and it is obliged to become meaningful. What survives the squeeze is what mattered. |
-| 2 | A trained network turns meaning into geometry. And once meaning is geometry, editing is arithmetic. |
-| 3 | Make the bottleneck English and the compressed state becomes readable by construction — so you can catch a thought the model never said out loud. |
-| 4 | Refusal is mediated by roughly one direction in activation space, which means alignment is far shallower than the effort that went into building it. |
-| 5 | We can now read some of what a model is thinking without asking it. Badly, expensively, and about half the time. |
+| 0 | We watch a model's claim about whether it is being tested and its actual behaviour move together — which is why you cannot find out what a model is thinking by asking it. |
+| 1 | We squeeze an image through a two-number bottleneck to see that forced compression makes a model store meaning rather than pixels. |
+| 2 | We find a single direction in that compressed space and add it to unrelated digits, which turns changing meaning into plain arithmetic. |
+| 3 | We swap the bottleneck from numbers to English, which makes a model's internal state readable — and lets Anthropic catch thoughts the model never says out loud. |
+| 4 | We find the one direction that means *I should decline*, delete it, and watch a model's safety training stop existing. |
+| 5 | We come back to the cold open now holding a way to read a model's state instead of interviewing it. |
 
 ---
 
