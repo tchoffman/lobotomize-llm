@@ -5,3 +5,4 @@ data/MNIST/
 data/acts_*.npz
 .DS_Store
 executed.ipynb
+executed_talk.ipynb
