@@ -215,6 +215,89 @@ models = {b: train_ae(b) for b in (2, 8, 32)}
 """)
 
 md("""
+### The same thing, drawn
+
+Real architecture, real digit, real numbers — this is `models[2]` doing its job.
+""")
+
+code("""
+from matplotlib.patches import Circle, FancyBboxPatch
+
+def draw_funnel(idx=0, ae=None):
+    ae = ae or models[2]
+    img = test[idx][0].unsqueeze(0).to(DEV)
+    with torch.no_grad():
+        rec, z = ae(img)
+    z = z[0].cpu().numpy()
+
+    n_dot = min(len(z), 8)                    # cap the drawn column so a wide bottleneck still fits
+    SHOW  = [14, 10, 7, n_dot, 7, 10, 14]
+    LBL   = ["784 pixels", "256", "64", str(len(z)), "64", "256", "784 pixels"]
+    ENC, BOT, DEC = "#3d6b9c", "#d1495b", "#4c956c"
+
+    fig, ax = plt.subplots(figsize=(13, 6.2))
+    xs = np.linspace(0, 10, 7)
+    cols = [[(x0, y) for y in np.linspace(-n/2, n/2, n) * (6.0/max(SHOW))]
+            for x0, n in zip(xs, SHOW)]
+    for a, b in zip(cols, cols[1:]):                      # the "everything connects" mesh
+        for p in a:
+            for q in b:
+                ax.plot([p[0], q[0]], [p[1], q[1]], color="#c9ced6", lw=0.35, zorder=1)
+    for k, col in enumerate(cols):
+        c = BOT if k == 3 else (ENC if k < 3 else DEC)
+        for p in col:
+            ax.add_patch(Circle(p, (0.20 if len(z) <= 4 else 0.13) if k == 3 else 0.13,
+                                facecolor=c, edgecolor="white", lw=0.8, zorder=3))
+        ax.text(col[0][0], -4.1, LBL[k], ha="center", va="top",
+                fontsize=14 if k == 3 else 11, weight="bold" if k == 3 else "normal",
+                color=BOT if k == 3 else "#333")
+
+    for x0, arr, title in ((-2.35, img[0, 0].cpu(), "INPUT"),
+                           (12.35, rec[0, 0].cpu(), "OUTPUT")):
+        axi = ax.inset_axes([x0, -1.6, 2.0, 3.2], transform=ax.transData)
+        axi.imshow(arr, cmap="gray"); axi.set_xticks([]); axi.set_yticks([])
+        axi.set_title(title, fontsize=11, weight="bold")
+    ax.annotate("", xy=(-0.25, 0), xytext=(-0.9, 0), arrowprops=dict(arrowstyle="-|>", lw=2, color="#333"))
+    ax.annotate("", xy=(11.3, 0), xytext=(10.3, 0), arrowprops=dict(arrowstyle="-|>", lw=2, color="#333"))
+
+    ax.text(1.6, 4.6, "ENCODER  —  squeeze", ha="center", fontsize=13, weight="bold", color=ENC)
+    ax.text(8.4, 4.6, "DECODER  —  expand",  ha="center", fontsize=13, weight="bold", color=DEC)
+    ax.plot([-0.3, 3.5], [4.15, 4.15], color=ENC, lw=2.5)
+    ax.plot([6.5, 10.3], [4.15, 4.15], color=DEC, lw=2.5)
+    ax.add_patch(FancyBboxPatch((4.35, -1.5), 1.3, 3.0, boxstyle="round,pad=0.12",
+                                fc="#fdf0f2", ec=BOT, lw=2, zorder=0))
+    ax.text(5.0, 2.35, "BOTTLENECK", ha="center", fontsize=13, weight="bold", color=BOT)
+    shown = ", ".join(f"{v:+.2f}" for v in z[:4]) + (", ..." if len(z) > 4 else "")
+    ax.text(5.0, -2.35, f"[{shown}]", ha="center",
+            fontsize=13 if len(z) <= 4 else 10, family="monospace", weight="bold", color=BOT)
+    ax.text(5.0, -3.0, f"this digit, to the model  ({len(z)} numbers)", ha="center",
+            fontsize=9.5, style="italic", color=BOT)
+    ax.set_xlim(-3.0, 15.0); ax.set_ylim(-5.2, 5.4); ax.axis("off")
+    ax.set_title(f"784 numbers in  ->  {len(z)} numbers in the middle  ->  784 back out",
+                 fontsize=14.5, weight="bold", pad=14)
+    plt.tight_layout(); plt.show()
+
+draw_funnel(0)
+""")
+
+md("""
+### Look at what came out
+
+A **7** went in. A **9** came out.
+
+Everything the model still knew about that image, at the narrowest point, was those two
+numbers — and two numbers is not enough to keep a 7 and a 9 apart. It kept "thin, slanted,
+one main stroke" and dropped the rest.
+
+That is not a bug in the code, it is **the price of the bottleneck**, and it is the number
+Part 6 will put a name to: *how much of the original survives the round trip?*
+""")
+
+code("""
+draw_funnel(0, ae=models[32])   # same picture, 32 numbers in the middle
+""")
+
+md("""
 ### How much of a digit survives a 2-number bottleneck?""")
 
 code("""
@@ -229,10 +312,8 @@ for row, (b, ae) in enumerate(models.items(), start=1):
     for j in range(8):
         axes[row, j].imshow(rec[j, 0].cpu(), cmap="gray")
 for ax in axes.ravel(): ax.axis("off")
-for row, label in enumerate(["original", "16x smaller", "4x smaller", "no bottleneck"]):
-    axes[row, 0].set_ylabel(label)
-rows = ["ORIGINAL (784)", "bottleneck = 2", "bottleneck = 8", "bottleneck = 32"]
-for row, t in enumerate(rows):
+for row, t in enumerate(["ORIGINAL  (784 numbers)", "bottleneck = 2   (392x compression)",
+                         "bottleneck = 8   (98x)", "bottleneck = 32  (24x)"]):
     axes[row, 0].set_title(t, loc="left", fontsize=10)
 plt.tight_layout(); plt.show()
 """)
@@ -241,7 +322,7 @@ md("""
 ### The bottleneck organises itself — without ever seeing a label
 
 Train with 2 numbers, plot those 2 numbers, colour by digit *after the fact*.
-Nobody told it there were ten classes.
+Nobody told this model there were ten classes, or that classes exist.
 """)
 
 code("""
@@ -257,11 +338,36 @@ sc = plt.scatter(Z[:, 0], Z[:, 1], c=Y, cmap="tab10", s=4, alpha=0.6)
 plt.colorbar(sc, label="digit (never shown to the model)")
 plt.title("The 2-D bottleneck of an autoencoder trained only to copy its input")
 plt.xlabel("latent dim 0"); plt.ylabel("latent dim 1"); plt.show()
+
+# Don't trust the eyeball - ask how much digit identity those 2 numbers actually carry.
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_score
+
+def knn_acc(Zx, n=4000):
+    return cross_val_score(KNeighborsClassifier(15), Zx[:n], Y[:n], cv=3).mean()
+
+Z32 = torch.cat([models[32].encoder(x.to(DEV)).cpu()
+                 for x, _ in torch.utils.data.DataLoader(test, batch_size=512)]).detach().numpy()
+print(f"guessing at random                : 10.0%")
+print(f"from the 2 bottleneck numbers     : {knn_acc(Z):.1%}")
+print(f"from the 32 bottleneck numbers    : {knn_acc(Z32):.1%}")
 """)
 
 md("""
-**This is a latent space.** Meaning became geometry. Similar things ended up near
-each other because that is the cheapest way to satisfy the reconstruction loss.
+**Be honest about that plot.** `1` and `0` claim their own territory, `6` and `2` have
+recognisable neighbourhoods, and `3/5/8/9` are a brawl in the middle. Two numbers is not
+enough to keep ten digits apart — which is the same lesson as the blurry `9`s above.
+
+But "I can't see clusters" is not the same as "there is no structure", so we measured it:
+those **2 numbers alone get 54% digit accuracy** against a 10% chance baseline. Nobody
+supplied a label. That structure is a side effect of being forced to compress.
+
+The 32-number bottleneck reaches ~88% — more room, more structure — and you *cannot* see
+that in a 2-D projection of it. Worth remembering when we get to Part 6 and start putting
+numbers on how much a bottleneck preserves.
+
+**This is a latent space.** Meaning became geometry. Similar things ended up near each
+other because that is the cheapest way to satisfy the reconstruction loss.
 
 Which raises the obvious question: *if position means something, does **direction**
 mean something?*
@@ -1335,7 +1441,7 @@ md("""
 - [Refusal in Language Models Is Mediated by a Single Direction](https://proceedings.neurips.cc/paper_files/paper/2024/file/f545448535dfde4f9786555403ab7c49-Paper-Conference.pdf) — Arditi et al., NeurIPS 2024 ([code](https://github.com/andyrdt/refusal_direction))
 - [Activation Addition: Steering Language Models Without Optimization](https://arxiv.org/abs/2308.10248) — Turner et al.
 - Explore SAE features yourself: [SAELens](https://github.com/jbloomAus/SAELens) · [Neuronpedia](https://neuronpedia.org)
-- Last talk: [demystify-attention](https://github.com/tchoffman/demystify-attention)
+- Last talk: `demystify-attention` (PyAtl, February 2026)
 """)
 
 nb = {"cells": C, "metadata": {"kernelspec": {"display_name": "Python (lobotomize-llm)",

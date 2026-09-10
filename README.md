@@ -1,7 +1,7 @@
 # How to Lobotomize an LLM
 
 Talk materials for **PyAtl, September 2026**. Sequel to
-[demystify-attention](https://github.com/tchoffman/demystify-attention) (PyAtl, February 2026).
+`demystify-attention` (PyAtl, February 2026).
 
 Last talk: *it's "just predicting the next word" — but doing that well requires real
 internal modelling.* This talk: **if there's real internal modelling in there, can we read
